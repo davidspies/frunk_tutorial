@@ -1,3 +1,7 @@
+pub mod hlist;
+
+use self::hlist::{HCons, HNil};
+
 pub trait AllFieldsPresent {
     fn all_fields_present(&self) -> bool;
 }
@@ -22,15 +26,15 @@ impl<T> Present for Vec<T> {
     }
 }
 
-impl AllFieldsPresentFromOwned for () {
+impl AllFieldsPresentFromOwned for HNil {
     fn all_fields_present(self) -> bool {
         true
     }
 }
 
-impl<H: Present, T: AllFieldsPresentFromOwned> AllFieldsPresentFromOwned for (H, T) {
+impl<H: Present, T: AllFieldsPresentFromOwned> AllFieldsPresentFromOwned for HCons<H, T> {
     fn all_fields_present(self) -> bool {
-        let (head, tail) = self;
+        let HCons { head, tail } = self;
         head.present() && tail.all_fields_present()
     }
 }
