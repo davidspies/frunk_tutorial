@@ -1,0 +1,9 @@
+[workspace]
+resolver = "3"
+members = ["client", "generic_lib"]
+
+[workspace.dependencies]
+frunk = "0.4.3"
+frunk_core = "0.4.3"
+frunk_utils = "0.2.2"
+frunk_utils_derives = "0.1.2"
