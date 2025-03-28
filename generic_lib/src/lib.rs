@@ -1,4 +1,4 @@
-use frunk::ToRef;
+use frunk::{Generic, ToRef};
 use frunk_utils::{Func, MapToList, WithGeneric};
 
 pub trait AllFieldsPresent {
@@ -16,14 +16,11 @@ macro_rules! derive_all_fields_present {
     };
 }
 
-pub fn all_fields_present_helper<
-    'a,
-    T: ToRef<'a, Output = R>,
-    R: WithGeneric<Repr = G>,
-    G: MapToList<Present, bool>,
->(
-    this: &'a T,
-) -> bool {
+pub fn all_fields_present_helper<'a, T: ToRef<'a>>(this: &'a T) -> bool
+where
+    <T as ToRef<'a>>::Output: WithGeneric,
+    <<T as ToRef<'a>>::Output as Generic>::Repr: MapToList<Present, bool>,
+{
     let bool_list = this.to_ref().map_to_list(Present);
     bool_list.into_iter().all(|x| x)
 }
