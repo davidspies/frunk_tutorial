@@ -14,10 +14,10 @@ macro_rules! derive_all_fields_present {
         impl $crate::AllFieldsPresent for $t {
             fn all_fields_present(&self) -> bool {
                 use frunk::ToRef;
-                use $crate::reexports::frunk_utils::ForEach;
+                use $crate::reexports::frunk_utils::WithGeneric;
 
                 let mut all_fields_present = true;
-                frunk::into_generic(self.to_ref())
+                self.to_ref()
                     .for_each($crate::PrefixPresent(&mut all_fields_present));
                 all_fields_present
             }
