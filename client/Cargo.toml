@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 generic_lib.path = "../generic_lib"
 
+frunk_core.workspace = true
 frunk.workspace = true

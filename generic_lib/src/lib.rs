@@ -1,9 +1,5 @@
 use frunk::{HCons, HNil};
 
-pub mod generic;
-
-pub use self::generic::Generic;
-
 pub trait AllFieldsPresent {
     fn all_fields_present(&self) -> bool;
 }
