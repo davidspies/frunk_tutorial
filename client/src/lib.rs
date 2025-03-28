@@ -1,7 +1,7 @@
-use frunk::Generic;
+use frunk::{Generic, ToRef};
 
 use generic_lib::{
-    AllFieldsPresent, AllFieldsPresentFromOwned, ToRef, derive_all_fields_present_from_owned,
+    AllFieldsPresent, AllFieldsPresentFromOwned, derive_all_fields_present_from_owned,
 };
 
 #[derive(Generic)]

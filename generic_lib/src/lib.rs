@@ -1,7 +1,3 @@
-mod to_ref;
-
-pub use self::to_ref::ToRef;
-
 use frunk::{HCons, HNil};
 
 pub trait AllFieldsPresent {
