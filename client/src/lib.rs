@@ -1,6 +1,6 @@
 use frunk::Generic;
 
-use generic_lib::{AllFieldsPresent, AllFieldsPresentFromOwned};
+use generic_lib::{AllFieldsPresent, derive_all_fields_present_from_owned};
 
 #[derive(Generic)]
 pub struct Foo {
@@ -9,12 +9,7 @@ pub struct Foo {
     field3: Vec<String>,
     field4: Option<String>,
 }
-
-impl AllFieldsPresentFromOwned for Foo {
-    fn all_fields_present(self) -> bool {
-        frunk::into_generic(self).all_fields_present()
-    }
-}
+derive_all_fields_present_from_owned!(Foo);
 
 impl AllFieldsPresent for Foo {
     fn all_fields_present(&self) -> bool {

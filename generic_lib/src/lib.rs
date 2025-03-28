@@ -8,6 +8,17 @@ pub trait AllFieldsPresentFromOwned {
     fn all_fields_present(self) -> bool;
 }
 
+#[macro_export]
+macro_rules! derive_all_fields_present_from_owned {
+    ($t:ty) => {
+        impl $crate::AllFieldsPresentFromOwned for $t {
+            fn all_fields_present(self) -> bool {
+                $crate::AllFieldsPresentFromOwned::all_fields_present(frunk::into_generic(self))
+            }
+        }
+    };
+}
+
 trait Present {
     fn present(&self) -> bool;
 }
