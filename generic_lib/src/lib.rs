@@ -35,6 +35,12 @@ impl<T> Present for Vec<T> {
     }
 }
 
+impl<'a, T: Present> Present for &'a T {
+    fn present(&self) -> bool {
+        T::present(self)
+    }
+}
+
 impl AllFieldsPresentFromOwned for HNil {
     fn all_fields_present(self) -> bool {
         true
