@@ -1,8 +1,5 @@
-pub mod reexports {
-    pub use frunk_utils;
-}
-
-use frunk_utils::Func;
+use frunk::ToRef;
+use frunk_utils::{Func, MapToList, WithGeneric};
 
 pub trait AllFieldsPresent {
     fn all_fields_present(&self) -> bool;
@@ -13,14 +10,22 @@ macro_rules! derive_all_fields_present {
     ($t:ty) => {
         impl $crate::AllFieldsPresent for $t {
             fn all_fields_present(&self) -> bool {
-                use frunk::ToRef;
-                use $crate::reexports::frunk_utils::WithGeneric;
-
-                let bool_list = self.to_ref().map_to_list($crate::Present);
-                bool_list.into_iter().all(|x| x)
+                $crate::all_fields_present_helper(self)
             }
         }
     };
+}
+
+pub fn all_fields_present_helper<
+    'a,
+    T: ToRef<'a, Output = R>,
+    R: WithGeneric<Repr = G>,
+    G: MapToList<Present, bool>,
+>(
+    this: &'a T,
+) -> bool {
+    let bool_list = this.to_ref().map_to_list(Present);
+    bool_list.into_iter().all(|x| x)
 }
 
 pub struct Present;
