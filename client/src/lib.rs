@@ -1,7 +1,7 @@
 use frunk::Generic;
 
 use generic_lib::{
-    AllFieldsPresent, AllFieldsPresentFromOwned, derive_all_fields_present_from_owned,
+    AllFieldsPresent, AllFieldsPresentFromOwned, ToRef, derive_all_fields_present_from_owned,
 };
 
 #[derive(Generic)]
@@ -21,8 +21,10 @@ pub struct FooRef<'a> {
     field4: &'a Option<String>,
 }
 
-impl Foo {
-    fn to_ref<'a>(&'a self) -> FooRef<'a> {
+impl<'a> ToRef<'a> for Foo {
+    type Output = FooRef<'a>;
+
+    fn to_ref(&'a self) -> FooRef<'a> {
         FooRef {
             field1: &self.field1,
             field2: &self.field2,
