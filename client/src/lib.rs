@@ -1,10 +1,11 @@
 use frunk::{Generic, ToRef};
+use frunk_utils_derives::ToRef;
 
 use generic_lib::{
     AllFieldsPresent, AllFieldsPresentFromOwned, derive_all_fields_present_from_owned,
 };
 
-#[derive(Generic)]
+#[derive(Generic, ToRef)]
 pub struct Foo {
     field1: Vec<i32>,
     field2: Option<char>,
@@ -12,27 +13,6 @@ pub struct Foo {
     field4: Option<String>,
 }
 derive_all_fields_present_from_owned!(Foo);
-
-#[derive(Generic)]
-pub struct FooRef<'a> {
-    field1: &'a Vec<i32>,
-    field2: &'a Option<char>,
-    field3: &'a Vec<String>,
-    field4: &'a Option<String>,
-}
-
-impl<'a> ToRef<'a> for Foo {
-    type Output = FooRef<'a>;
-
-    fn to_ref(&'a self) -> FooRef<'a> {
-        FooRef {
-            field1: &self.field1,
-            field2: &self.field2,
-            field3: &self.field3,
-            field4: &self.field4,
-        }
-    }
-}
 
 impl AllFieldsPresent for Foo {
     fn all_fields_present(&self) -> bool {
