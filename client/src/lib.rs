@@ -1,4 +1,4 @@
-use frunk::{HCons, HNil, hlist::h_cons};
+use frunk::{HList, hlist};
 
 use generic_lib::{AllFieldsPresent, AllFieldsPresentFromOwned};
 
@@ -9,15 +9,11 @@ pub struct Foo {
     field4: Option<String>,
 }
 
-type FooHListRepr =
-    HCons<Vec<i32>, HCons<Option<char>, HCons<Vec<String>, HCons<Option<String>, HNil>>>>;
+type FooHListRepr = HList![Vec<i32>, Option<char>, Vec<String>, Option<String>];
 
 impl Foo {
     fn into_hlist_repr(self) -> FooHListRepr {
-        h_cons(
-            self.field1,
-            h_cons(self.field2, h_cons(self.field3, h_cons(self.field4, HNil))),
-        )
+        hlist![self.field1, self.field2, self.field3, self.field4]
     }
 }
 

@@ -1,10 +1,10 @@
-use frunk::{HCons, HNil};
+use frunk::HList;
 
 use generic_lib::AllFieldsPresentFromOwned;
 
 fn check_all_fields_present_from_owned<T: AllFieldsPresentFromOwned>() {}
 
-type MyHList = HCons<Vec<i32>, HCons<Vec<String>, HCons<Option<usize>, HNil>>>;
+type MyHList = HList![Vec<i32>, Vec<String>, Option<usize>];
 
 #[test]
 fn check_my_hlist() {
