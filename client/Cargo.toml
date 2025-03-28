@@ -8,4 +8,5 @@ generic_lib.path = "../generic_lib"
 
 frunk_core.workspace = true
 frunk_utils_derives.workspace = true
+frunk_utils.workspace = true
 frunk.workspace = true
