@@ -1,6 +1,8 @@
 use frunk::Generic;
 
-use generic_lib::{AllFieldsPresent, derive_all_fields_present_from_owned};
+use generic_lib::{
+    AllFieldsPresent, AllFieldsPresentFromOwned, derive_all_fields_present_from_owned,
+};
 
 #[derive(Generic)]
 pub struct Foo {
@@ -32,9 +34,6 @@ impl Foo {
 
 impl AllFieldsPresent for Foo {
     fn all_fields_present(&self) -> bool {
-        !self.field1.is_empty()
-            && self.field2.is_some()
-            && !self.field3.is_empty()
-            && self.field4.is_some()
+        AllFieldsPresentFromOwned::all_fields_present(frunk::into_generic(self.to_ref()))
     }
 }
