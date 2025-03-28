@@ -1,4 +1,5 @@
-use generic_lib::hlist::{HCons, HNil, h_cons};
+use frunk::{HCons, HNil, hlist::h_cons};
+
 use generic_lib::{AllFieldsPresent, AllFieldsPresentFromOwned};
 
 pub struct Foo {

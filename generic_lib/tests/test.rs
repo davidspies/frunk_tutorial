@@ -1,5 +1,6 @@
+use frunk::{HCons, HNil};
+
 use generic_lib::AllFieldsPresentFromOwned;
-use generic_lib::hlist::{HCons, HNil};
 
 fn check_all_fields_present_from_owned<T: AllFieldsPresentFromOwned>() {}
 

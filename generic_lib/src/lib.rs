@@ -1,6 +1,4 @@
-pub mod hlist;
-
-use self::hlist::{HCons, HNil};
+use frunk::{HCons, HNil};
 
 pub trait AllFieldsPresent {
     fn all_fields_present(&self) -> bool;

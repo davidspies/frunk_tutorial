@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 generic_lib.path = "../generic_lib"
+
+frunk.workspace = true
