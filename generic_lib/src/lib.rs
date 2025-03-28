@@ -9,11 +9,11 @@ pub trait AllFieldsPresentFromOwned {
 }
 
 #[macro_export]
-macro_rules! derive_all_fields_present_from_owned {
+macro_rules! derive_all_fields_present {
     ($t:ty) => {
-        impl $crate::AllFieldsPresentFromOwned for $t {
-            fn all_fields_present(self) -> bool {
-                $crate::AllFieldsPresentFromOwned::all_fields_present(frunk::into_generic(self))
+        impl $crate::AllFieldsPresent for Foo {
+            fn all_fields_present(&self) -> bool {
+                $crate::AllFieldsPresentFromOwned::all_fields_present(frunk::into_generic(self.to_ref()))
             }
         }
     };
