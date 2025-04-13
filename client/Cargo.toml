@@ -4,8 +4,4 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-generic_lib.path = "../generic_lib"
-
-frunk_core.workspace = true
-frunk_utils_derives.workspace = true
-frunk.workspace = true
+ndarray.workspace = true
