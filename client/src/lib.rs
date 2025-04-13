@@ -1,3 +1,6 @@
+use frunk::Generic;
+use frunk_utils_derives::ToRef;
+use generic_lib::{AllFieldsPresent, derive_all_fields_present};
 use ndarray::{
     ArcArray, ArcArray1, ArcArray2, Array1, Array2, Array3, ArrayView1, ArrayView2, ArrayView3, Ix3,
 };
@@ -13,6 +16,7 @@ pub struct SimulationState {
     pub sensor_readings: Array2<f32>,
 }
 
+#[derive(Generic, ToRef)]
 pub struct PartialSimulationState {
     pub positions: Option<Array2<f64>>,
     pub velocities: Option<Array2<f64>>,
@@ -23,6 +27,7 @@ pub struct PartialSimulationState {
     pub connectivity_matrix: Option<Array2<u8>>,
     pub sensor_readings: Option<Array2<f32>>,
 }
+derive_all_fields_present!(PartialSimulationState);
 
 pub struct SimulationStateArcs {
     pub positions: ArcArray2<f64>,
@@ -44,4 +49,50 @@ pub struct SimulationStateView<'a> {
     pub event_timestamps: ArrayView1<'a, i64>,
     pub connectivity_matrix: ArrayView2<'a, u8>,
     pub sensor_readings: ArrayView2<'a, f32>,
+}
+
+impl PartialSimulationState {
+    pub fn build(self) -> Result<SimulationState, Self> {
+        if !self.all_fields_present() {
+            return Err(self);
+        }
+        Ok(SimulationState {
+            positions: self.positions.unwrap(),
+            velocities: self.velocities.unwrap(),
+            particle_types: self.particle_types.unwrap(),
+            is_active_mask: self.is_active_mask.unwrap(),
+            density_field: self.density_field.unwrap(),
+            event_timestamps: self.event_timestamps.unwrap(),
+            connectivity_matrix: self.connectivity_matrix.unwrap(),
+            sensor_readings: self.sensor_readings.unwrap(),
+        })
+    }
+}
+
+impl SimulationState {
+    pub fn views(&self) -> SimulationStateView {
+        SimulationStateView {
+            positions: self.positions.view(),
+            velocities: self.velocities.view(),
+            particle_types: self.particle_types.view(),
+            is_active_mask: self.is_active_mask.view(),
+            density_field: self.density_field.view(),
+            event_timestamps: self.event_timestamps.view(),
+            connectivity_matrix: self.connectivity_matrix.view(),
+            sensor_readings: self.sensor_readings.view(),
+        }
+    }
+
+    pub fn arcs(self) -> SimulationStateArcs {
+        SimulationStateArcs {
+            positions: ArcArray::from(self.positions),
+            velocities: ArcArray::from(self.velocities),
+            particle_types: ArcArray::from(self.particle_types),
+            is_active_mask: ArcArray::from(self.is_active_mask),
+            density_field: ArcArray::from(self.density_field),
+            event_timestamps: ArcArray::from(self.event_timestamps),
+            connectivity_matrix: ArcArray::from(self.connectivity_matrix),
+            sensor_readings: ArcArray::from(self.sensor_readings),
+        }
+    }
 }
