@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 frunk_utils.workspace = true
 frunk.workspace = true
+ndarray.workspace = true

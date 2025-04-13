@@ -1,57 +1,36 @@
 use frunk::Generic;
-use frunk_utils_derives::ToRef;
-use generic_lib::{AllFieldsPresent, derive_all_fields_present};
-use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
+use ndarray::{ArcArray, Ix1, Ix2, Ix3};
 
-pub struct SimulationState {
-    pub positions: Array<f64, Ix2>,
-    pub velocities: Array<f64, Ix2>,
-    pub particle_types: Array<i32, Ix1>,
-    pub is_active_mask: Array<bool, Ix1>,
-    pub density_field: Array<f32, Ix3>,
-    pub event_timestamps: Array<i64, Ix1>,
-    pub connectivity_matrix: Array<u8, Ix2>,
-    pub sensor_readings: Array<f32, Ix2>,
+use generic_lib::{Arcd, Domain, Owned, Partial, View};
+
+#[derive(Generic)]
+pub struct SimulationStateG<D: Domain> {
+    pub positions: D::Array<f64, Ix2>,
+    pub velocities: D::Array<f64, Ix2>,
+    pub particle_types: D::Array<i32, Ix1>,
+    pub is_active_mask: D::Array<bool, Ix1>,
+    pub density_field: D::Array<f32, Ix3>,
+    pub event_timestamps: D::Array<i64, Ix1>,
+    pub connectivity_matrix: D::Array<u8, Ix2>,
+    pub sensor_readings: D::Array<f32, Ix2>,
 }
 
-#[derive(Generic, ToRef)]
-pub struct PartialSimulationState {
-    pub positions: Option<Array<f64, Ix2>>,
-    pub velocities: Option<Array<f64, Ix2>>,
-    pub particle_types: Option<Array<i32, Ix1>>,
-    pub is_active_mask: Option<Array<bool, Ix1>>,
-    pub density_field: Option<Array<f32, Ix3>>,
-    pub event_timestamps: Option<Array<i64, Ix1>>,
-    pub connectivity_matrix: Option<Array<u8, Ix2>>,
-    pub sensor_readings: Option<Array<f32, Ix2>>,
-}
-derive_all_fields_present!(PartialSimulationState);
-
-pub struct SimulationStateArcs {
-    pub positions: ArcArray<f64, Ix2>,
-    pub velocities: ArcArray<f64, Ix2>,
-    pub particle_types: ArcArray<i32, Ix1>,
-    pub is_active_mask: ArcArray<bool, Ix1>,
-    pub density_field: ArcArray<f32, Ix3>,
-    pub event_timestamps: ArcArray<i64, Ix1>,
-    pub connectivity_matrix: ArcArray<u8, Ix2>,
-    pub sensor_readings: ArcArray<f32, Ix2>,
-}
-
-pub struct SimulationStateView<'a> {
-    pub positions: ArrayView<'a, f64, Ix2>,
-    pub velocities: ArrayView<'a, f64, Ix2>,
-    pub particle_types: ArrayView<'a, i32, Ix1>,
-    pub is_active_mask: ArrayView<'a, bool, Ix1>,
-    pub density_field: ArrayView<'a, f32, Ix3>,
-    pub event_timestamps: ArrayView<'a, i64, Ix1>,
-    pub connectivity_matrix: ArrayView<'a, u8, Ix2>,
-    pub sensor_readings: ArrayView<'a, f32, Ix2>,
-}
+pub type SimulationState = SimulationStateG<Owned>;
+pub type PartialSimulationState = SimulationStateG<Partial>;
+pub type SimulationStateArcs = SimulationStateG<Arcd>;
+pub type SimulationStateView<'a> = SimulationStateG<View<'a>>;
 
 impl PartialSimulationState {
     pub fn build(self) -> Result<SimulationState, Self> {
-        if !self.all_fields_present() {
+        let all_fields_present = self.positions.is_some()
+            && self.velocities.is_some()
+            && self.particle_types.is_some()
+            && self.is_active_mask.is_some()
+            && self.density_field.is_some()
+            && self.event_timestamps.is_some()
+            && self.connectivity_matrix.is_some()
+            && self.sensor_readings.is_some();
+        if !all_fields_present {
             return Err(self);
         }
         Ok(SimulationState {

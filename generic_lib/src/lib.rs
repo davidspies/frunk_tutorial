@@ -1,44 +1,27 @@
-use frunk::{Generic, ToRef};
-use frunk_utils::{Func, MapToList, WithGeneric};
+use std::marker::PhantomData;
 
-pub trait AllFieldsPresent {
-    fn all_fields_present(&self) -> bool;
+use ndarray::{ArcArray, Array, ArrayView};
+
+pub trait Domain {
+    type Array<DType: 'static, Idx>;
 }
 
-#[macro_export]
-macro_rules! derive_all_fields_present {
-    ($t:ty) => {
-        impl $crate::AllFieldsPresent for $t {
-            fn all_fields_present(&self) -> bool {
-                $crate::all_fields_present_helper(self)
-            }
-        }
-    };
+pub struct Owned;
+impl Domain for Owned {
+    type Array<DType: 'static, Idx> = Array<DType, Idx>;
 }
 
-pub fn all_fields_present_helper<'a, T: ToRef<'a>>(this: &'a T) -> bool
-where
-    <T as ToRef<'a>>::Output: WithGeneric,
-    <<T as ToRef<'a>>::Output as Generic>::Repr: MapToList<Present, bool>,
-{
-    let bool_list = this.to_ref().map_to_list(Present);
-    bool_list.into_iter().all(|x| x)
+pub struct Partial;
+impl Domain for Partial {
+    type Array<DType: 'static, Idx> = Option<Array<DType, Idx>>;
 }
 
-pub struct Present;
-
-impl<T> Func<&'_ Option<T>> for Present {
-    type Output = bool;
-
-    fn call(&mut self, i: &Option<T>) -> Self::Output {
-        i.is_some()
-    }
+pub struct Arcd;
+impl Domain for Arcd {
+    type Array<DType: 'static, Idx> = ArcArray<DType, Idx>;
 }
 
-impl<T> Func<&'_ Vec<T>> for Present {
-    type Output = bool;
-
-    fn call(&mut self, i: &Vec<T>) -> Self::Output {
-        !i.is_empty()
-    }
+pub struct View<'a>(PhantomData<&'a ()>);
+impl<'a> Domain for View<'a> {
+    type Array<DType: 'static, Idx> = ArrayView<'a, DType, Idx>;
 }
