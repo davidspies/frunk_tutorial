@@ -25,3 +25,17 @@ pub struct View<'a>(PhantomData<&'a ()>);
 impl<'a> Domain for View<'a> {
     type Array<DType: 'static, Idx> = ArrayView<'a, DType, Idx>;
 }
+
+pub trait ArrayCarrier {
+    type Partial;
+    type Arcd;
+    type View<'a>
+    where
+        Self: 'a;
+
+    fn build(partial: Self::Partial) -> Result<Self, Self::Partial>
+    where
+        Self: Sized;
+    fn views(&self) -> Self::View<'_>;
+    fn arcs(self) -> Self::Arcd;
+}

@@ -3,7 +3,7 @@ use frunk_utils::{Func, WithGeneric};
 use frunk_utils_derives::ToRef;
 use ndarray::{ArcArray, Array, ArrayView, Dimension, Ix1, Ix2, Ix3};
 
-use generic_lib::{Arcd, Domain, Owned, Partial, View};
+use generic_lib::{Arcd, ArrayCarrier, Domain, Owned, Partial, View};
 
 #[derive(Generic, ToRef)]
 pub struct SimulationStateG<D: Domain> {
@@ -22,8 +22,12 @@ pub type PartialSimulationState = SimulationStateG<Partial>;
 pub type SimulationStateArcs = SimulationStateG<Arcd>;
 pub type SimulationStateView<'a> = SimulationStateG<View<'a>>;
 
-impl PartialSimulationState {
-    pub fn build(self) -> Result<SimulationState, Self> {
+impl ArrayCarrier for SimulationState {
+    type Partial = PartialSimulationState;
+    type Arcd = SimulationStateArcs;
+    type View<'a> = SimulationStateView<'a>;
+
+    fn build(partial: Self::Partial) -> Result<Self, Self::Partial> {
         struct IsSome;
         impl<'a, T> Func<&'a Option<T>> for IsSome {
             type Output = bool;
@@ -33,9 +37,9 @@ impl PartialSimulationState {
             }
         }
 
-        let all_fields_present = self.to_ref().map_to_list(IsSome).into_iter().all(|x| x);
+        let all_fields_present = partial.to_ref().map_to_list(IsSome).into_iter().all(|x| x);
         if !all_fields_present {
-            return Err(self);
+            return Err(partial);
         }
 
         struct UnwrapField;
@@ -47,12 +51,10 @@ impl PartialSimulationState {
             }
         }
 
-        Ok(self.hmap(UnwrapField))
+        Ok(partial.hmap(UnwrapField))
     }
-}
 
-impl SimulationState {
-    pub fn views(&self) -> SimulationStateView {
+    fn views(&self) -> Self::View<'_> {
         struct GetView;
         impl<'a, A, D: Dimension> Func<&'a Array<A, D>> for GetView {
             type Output = ArrayView<'a, A, D>;
@@ -65,7 +67,7 @@ impl SimulationState {
         self.to_ref().hmap(GetView)
     }
 
-    pub fn arcs(self) -> SimulationStateArcs {
+    fn arcs(self) -> Self::Arcd {
         struct ArcArrayFrom;
         impl<A, D: Dimension> Func<Array<A, D>> for ArcArrayFrom {
             type Output = ArcArray<A, D>;
