@@ -1,9 +1,11 @@
-use frunk::Generic;
-use ndarray::{ArcArray, Ix1, Ix2, Ix3};
+use frunk::{Generic, ToRef};
+use frunk_utils::{Func, WithGeneric};
+use frunk_utils_derives::ToRef;
+use ndarray::{ArcArray, Array, ArrayView, Dimension, Ix1, Ix2, Ix3};
 
 use generic_lib::{Arcd, Domain, Owned, Partial, View};
 
-#[derive(Generic)]
+#[derive(Generic, ToRef)]
 pub struct SimulationStateG<D: Domain> {
     pub positions: D::Array<f64, Ix2>,
     pub velocities: D::Array<f64, Ix2>,
@@ -22,54 +24,57 @@ pub type SimulationStateView<'a> = SimulationStateG<View<'a>>;
 
 impl PartialSimulationState {
     pub fn build(self) -> Result<SimulationState, Self> {
-        let all_fields_present = self.positions.is_some()
-            && self.velocities.is_some()
-            && self.particle_types.is_some()
-            && self.is_active_mask.is_some()
-            && self.density_field.is_some()
-            && self.event_timestamps.is_some()
-            && self.connectivity_matrix.is_some()
-            && self.sensor_readings.is_some();
+        struct IsSome;
+        impl<'a, T> Func<&'a Option<T>> for IsSome {
+            type Output = bool;
+
+            fn call(&mut self, i: &'a Option<T>) -> Self::Output {
+                i.is_some()
+            }
+        }
+
+        let all_fields_present = self.to_ref().map_to_list(IsSome).into_iter().all(|x| x);
         if !all_fields_present {
             return Err(self);
         }
-        Ok(SimulationState {
-            positions: self.positions.unwrap(),
-            velocities: self.velocities.unwrap(),
-            particle_types: self.particle_types.unwrap(),
-            is_active_mask: self.is_active_mask.unwrap(),
-            density_field: self.density_field.unwrap(),
-            event_timestamps: self.event_timestamps.unwrap(),
-            connectivity_matrix: self.connectivity_matrix.unwrap(),
-            sensor_readings: self.sensor_readings.unwrap(),
-        })
+
+        struct UnwrapField;
+        impl<T> Func<Option<T>> for UnwrapField {
+            type Output = T;
+
+            fn call(&mut self, i: Option<T>) -> Self::Output {
+                i.unwrap()
+            }
+        }
+
+        Ok(self.hmap(UnwrapField))
     }
 }
 
 impl SimulationState {
     pub fn views(&self) -> SimulationStateView {
-        SimulationStateView {
-            positions: self.positions.view(),
-            velocities: self.velocities.view(),
-            particle_types: self.particle_types.view(),
-            is_active_mask: self.is_active_mask.view(),
-            density_field: self.density_field.view(),
-            event_timestamps: self.event_timestamps.view(),
-            connectivity_matrix: self.connectivity_matrix.view(),
-            sensor_readings: self.sensor_readings.view(),
+        struct GetView;
+        impl<'a, A, D: Dimension> Func<&'a Array<A, D>> for GetView {
+            type Output = ArrayView<'a, A, D>;
+
+            fn call(&mut self, i: &'a Array<A, D>) -> Self::Output {
+                i.view()
+            }
         }
+
+        self.to_ref().hmap(GetView)
     }
 
     pub fn arcs(self) -> SimulationStateArcs {
-        SimulationStateArcs {
-            positions: ArcArray::from(self.positions),
-            velocities: ArcArray::from(self.velocities),
-            particle_types: ArcArray::from(self.particle_types),
-            is_active_mask: ArcArray::from(self.is_active_mask),
-            density_field: ArcArray::from(self.density_field),
-            event_timestamps: ArcArray::from(self.event_timestamps),
-            connectivity_matrix: ArcArray::from(self.connectivity_matrix),
-            sensor_readings: ArcArray::from(self.sensor_readings),
+        struct ArcArrayFrom;
+        impl<A, D: Dimension> Func<Array<A, D>> for ArcArrayFrom {
+            type Output = ArcArray<A, D>;
+
+            fn call(&mut self, i: Array<A, D>) -> Self::Output {
+                ArcArray::from(i)
+            }
         }
+
+        self.hmap(ArcArrayFrom)
     }
 }
