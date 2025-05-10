@@ -1,4 +1,4 @@
-# Frunk Tutorial
+# Part 1: Introduction to Frunk
 
 This README is structured to be read while stepping through the commits in this git repo. Every commit independently compiles. Most snippets of code are attached to a particular commit in the repo. The github view of the relevant commit for each code snippet is linked inline in the text. I recommend checking out the repo and stepping through the commits along with me while reading so you can see how all the code fits together and compiles at each step along the way. You can use the `next_commit.sh` and `prev_commit.sh` scripts to quickly step forwards and backwards. Use `first_commit.sh` to go to the beginning.
 
@@ -651,3 +651,236 @@ where
 ```
 
 In either case, we'll likely dedicate more lines of code to expressing the type signature and constraints of the helper function than to actually implementing it. 
+
+# Part 2: Frunk and GATs
+It's sometimes the case that we want a bunch of datastructures that "mirror" each other in some way and between which we can easily convert.
+
+## Datastructures with "mirrored" fields
+Consider the [following](https://github.com/davidspies/frunk_tutorial/commit/4c16a3b7663cd155d0dd189455c71cb288f0d5fd) example, where we imagine we're tracking a collection of particles and relations between them in a simulation. We'll want to rely heavily on types from the `ndarray` crate for tracking all the data about our particles:
+
+```rust
+use ndarray::{
+    ArcArray, ArcArray1, ArcArray2, Array1, Array2, Array3, ArrayView1, ArrayView2, ArrayView3, Ix3,
+};
+
+pub struct SimulationState {
+    pub positions: Array2<f64>,
+    pub velocities: Array2<f64>,
+    pub particle_types: Array1<i32>,
+    pub is_active_mask: Array1<bool>,
+    pub density_field: Array3<f32>,
+    pub event_timestamps: Array1<i64>,
+    pub connectivity_matrix: Array2<u8>,
+    pub sensor_readings: Array2<f32>,
+}
+
+pub struct PartialSimulationState {
+    pub positions: Option<Array2<f64>>,
+    pub velocities: Option<Array2<f64>>,
+    pub particle_types: Option<Array1<i32>>,
+    pub is_active_mask: Option<Array1<bool>>,
+    pub density_field: Option<Array3<f32>>,
+    pub event_timestamps: Option<Array1<i64>>,
+    pub connectivity_matrix: Option<Array2<u8>>,
+    pub sensor_readings: Option<Array2<f32>>,
+}
+
+pub struct SimulationStateArcs {
+    pub positions: ArcArray2<f64>,
+    pub velocities: ArcArray2<f64>,
+    pub particle_types: ArcArray1<i32>,
+    pub is_active_mask: ArcArray1<bool>,
+    pub density_field: ArcArray<f32, Ix3>,
+    pub event_timestamps: ArcArray1<i64>,
+    pub connectivity_matrix: ArcArray2<u8>,
+    pub sensor_readings: ArcArray2<f32>,
+}
+
+pub struct SimulationStateView<'a> {
+    pub positions: ArrayView2<'a, f64>,
+    pub velocities: ArrayView2<'a, f64>,
+    pub particle_types: ArrayView1<'a, i32>,
+    pub is_active_mask: ArrayView1<'a, bool>,
+    pub density_field: ArrayView3<'a, f32>,
+    pub event_timestamps: ArrayView1<'a, i64>,
+    pub connectivity_matrix: ArrayView2<'a, u8>,
+    pub sensor_readings: ArrayView2<'a, f32>,
+}
+```
+
+Here we have four different structs.
+* A `SimulationState` stores the positions, velocities etc of our particles in a collection of `ndarray::Array`s each with different numeric types and dimension counts.
+* A `PartialSimulationState` stores partial observations where each field may or may not be present (as indicated with an `Option`). You might think of this as being like a `SimulationState`-_builder_ from which you can create a `SimulationState` once all fields are populated.
+* `SimulationStateArcs` is useful when you want to have a frozen, immutable `SimulationState` whose fields can individually be shared between threads.
+* `SimulationStateView` is useful when you want to _borrow_ each of the fields in a `SimulationState` or if you want to take something like a pointer a chunk of memory returned by a C function and _interpret_ it as a collection of fields that make up a `SimulationState` (Eg using the unsafe `ArrayView::from_shape_ptr` function).
+
+We'll probably also want some [methods](https://github.com/davidspies/frunk_tutorial/commit/c3c3c44103f484dc821652b319f20f1daca13491) for operating on and converting between them.
+
+Let's write the `build` function which takes a `PartialSimulationState` and attempts to turn it into a `SimulationState` (failing if not all fields are `Some`), and also the `views` and `arcs` functions. The former takes a reference to a `SimulationState` and returns a `SimulationStateView`. The latter takes `SimulationState` by value and wraps all of its fields in `ArcArray`s:
+
+```rust
+impl PartialSimulationState {
+    fn all_fields_present(&self) -> bool {
+        let Self {
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        } = self;
+        positions.is_some()
+            && velocities.is_some()
+            && particle_types.is_some()
+            && is_active_mask.is_some()
+            && density_field.is_some()
+            && event_timestamps.is_some()
+            && connectivity_matrix.is_some()
+            && sensor_readings.is_some()
+    }
+
+    pub fn build(self) -> Result<SimulationState, Self> {
+        if !self.all_fields_present() {
+            return Err(self);
+        }
+        Ok(SimulationState {
+            positions: self.positions.unwrap(),
+            velocities: self.velocities.unwrap(),
+            particle_types: self.particle_types.unwrap(),
+            is_active_mask: self.is_active_mask.unwrap(),
+            density_field: self.density_field.unwrap(),
+            event_timestamps: self.event_timestamps.unwrap(),
+            connectivity_matrix: self.connectivity_matrix.unwrap(),
+            sensor_readings: self.sensor_readings.unwrap(),
+        })
+    }
+}
+
+impl SimulationState {
+    pub fn views(&self) -> SimulationStateView {
+        SimulationStateView {
+            positions: self.positions.view(),
+            velocities: self.velocities.view(),
+            particle_types: self.particle_types.view(),
+            is_active_mask: self.is_active_mask.view(),
+            density_field: self.density_field.view(),
+            event_timestamps: self.event_timestamps.view(),
+            connectivity_matrix: self.connectivity_matrix.view(),
+            sensor_readings: self.sensor_readings.view(),
+        }
+    }
+
+    pub fn arcs(self) -> SimulationStateArcs {
+        SimulationStateArcs {
+            positions: ArcArray::from(self.positions),
+            velocities: ArcArray::from(self.velocities),
+            particle_types: ArcArray::from(self.particle_types),
+            is_active_mask: ArcArray::from(self.is_active_mask),
+            density_field: ArcArray::from(self.density_field),
+            event_timestamps: ArcArray::from(self.event_timestamps),
+            connectivity_matrix: ArcArray::from(self.connectivity_matrix),
+            sensor_readings: ArcArray::from(self.sensor_readings),
+        }
+    }
+}
+```
+
+These functions seem like they might be more generally useful. Let's [create a trait to encompass them](c43cb2244ac7782b3e82d0250c1ddbedb1aca010). We'll repurpose our `generic_lib` crate and add an `ArrayFields` trait to it:
+
+```rust
+pub trait ArrayFields: Sized {
+    type Partial;
+    type Arcs;
+    type Views<'a>
+    where
+        Self: 'a;
+
+    fn build(partial: Self::Partial) -> Result<Self, Self::Partial>;
+    fn views(&self) -> Self::Views<'_>;
+    fn arcs(self) -> Self::Arcs;
+}
+```
+
+For the sake of uniformity, instead of using the `Array1`, `Array2`, `Array3` type aliases, let's inline those and [explicitly write out the dimension parameters](https://github.com/davidspies/frunk_tutorial/commit/6f17da2ca85a90e61eb1a8d7f9333f8923817f42):
+
+```rust
+use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
+
+pub struct SimulationState {
+    pub positions: Array<f64, Ix2>,
+    pub velocities: Array<f64, Ix2>,
+    pub particle_types: Array<i32, Ix1>,
+    pub is_active_mask: Array<bool, Ix1>,
+    pub density_field: Array<f32, Ix3>,
+    pub event_timestamps: Array<i64, Ix1>,
+    pub connectivity_matrix: Array<u8, Ix2>,
+    pub sensor_readings: Array<f32, Ix2>,
+}
+
+pub struct PartialSimulationState {
+    pub positions: Option<Array<f64, Ix2>>,
+    pub velocities: Option<Array<f64, Ix2>>,
+    pub particle_types: Option<Array<i32, Ix1>>,
+    pub is_active_mask: Option<Array<bool, Ix1>>,
+    pub density_field: Option<Array<f32, Ix3>>,
+    pub event_timestamps: Option<Array<i64, Ix1>>,
+    pub connectivity_matrix: Option<Array<u8, Ix2>>,
+    pub sensor_readings: Option<Array<f32, Ix2>>,
+}
+
+pub struct SimulationStateArcs {
+    pub positions: ArcArray<f64, Ix2>,
+    pub velocities: ArcArray<f64, Ix2>,
+    pub particle_types: ArcArray<i32, Ix1>,
+    pub is_active_mask: ArcArray<bool, Ix1>,
+    pub density_field: ArcArray<f32, Ix3>,
+    pub event_timestamps: ArcArray<i64, Ix1>,
+    pub connectivity_matrix: ArcArray<u8, Ix2>,
+    pub sensor_readings: ArcArray<f32, Ix2>,
+}
+
+pub struct SimulationStateView<'a> {
+    pub positions: ArrayView<'a, f64, Ix2>,
+    pub velocities: ArrayView<'a, f64, Ix2>,
+    pub particle_types: ArrayView<'a, i32, Ix1>,
+    pub is_active_mask: ArrayView<'a, bool, Ix1>,
+    pub density_field: ArrayView<'a, f32, Ix3>,
+    pub event_timestamps: ArrayView<'a, i64, Ix1>,
+    pub connectivity_matrix: ArrayView<'a, u8, Ix2>,
+    pub sensor_readings: ArrayView<'a, f32, Ix2>,
+}
+```
+
+If it wasn't clear before, it should now be abundantly clear that each of our datastructures are just "doing the same thing" to all it's fields, where each field's parameters is a pair of a primitive type and a dimension count.
+
+## What if rust had higher kinded types (HKT)'s?
+
+Formally, we want to consolidate all of our datastructures into a single struct which is itself _parameterized by_ a [type constructor](https://en.wikipedia.org/wiki/Type_constructor). In an ideal world, we would just write something like:
+
+```rust
+// I'm inventing this syntax for expressing higher-kinded types in rust.
+// This won't actually compile.
+pub struct SimulationStateG<F<*, *>> {
+    pub positions: F<f64, Ix2>,
+    pub velocities: F<f64, Ix2>,
+    pub particle_types: F<i32, Ix1>,
+    pub is_active_mask: F<bool, Ix1>,
+    pub density_field: F<f32, Ix3>,
+    pub event_timestamps: F<i64, Ix1>,
+    pub connectivity_matrix: F<u8, Ix2>,
+    pub sensor_readings: F<f32, Ix2>,
+}
+```
+
+(the `G` is short for "generic")
+
+Now all of our previously-defined types become type aliases that look something like this:
+
+```rust
+pub type SimulationState = SimulationStateG<Array<*, *>>;
+pub type PartialSimulationState = SimulationStateG<Option<Array<*, *>>>
+pub type SimulationStateArcs = SimulationStateG<ArcArray<*, *>>
+pub type SimulationStateView<'a> = SimulationStateG<ArrayView<'a, *, *>>
+```
