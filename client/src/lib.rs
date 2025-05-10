@@ -45,3 +45,70 @@ pub struct SimulationStateView<'a> {
     pub connectivity_matrix: ArrayView2<'a, u8>,
     pub sensor_readings: ArrayView2<'a, f32>,
 }
+
+impl PartialSimulationState {
+    fn all_fields_present(&self) -> bool {
+        let Self {
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        } = self;
+        positions.is_some()
+            && velocities.is_some()
+            && particle_types.is_some()
+            && is_active_mask.is_some()
+            && density_field.is_some()
+            && event_timestamps.is_some()
+            && connectivity_matrix.is_some()
+            && sensor_readings.is_some()
+    }
+
+    pub fn build(self) -> Result<SimulationState, Self> {
+        if !self.all_fields_present() {
+            return Err(self);
+        }
+        Ok(SimulationState {
+            positions: self.positions.unwrap(),
+            velocities: self.velocities.unwrap(),
+            particle_types: self.particle_types.unwrap(),
+            is_active_mask: self.is_active_mask.unwrap(),
+            density_field: self.density_field.unwrap(),
+            event_timestamps: self.event_timestamps.unwrap(),
+            connectivity_matrix: self.connectivity_matrix.unwrap(),
+            sensor_readings: self.sensor_readings.unwrap(),
+        })
+    }
+}
+
+impl SimulationState {
+    pub fn views(&self) -> SimulationStateView {
+        SimulationStateView {
+            positions: self.positions.view(),
+            velocities: self.velocities.view(),
+            particle_types: self.particle_types.view(),
+            is_active_mask: self.is_active_mask.view(),
+            density_field: self.density_field.view(),
+            event_timestamps: self.event_timestamps.view(),
+            connectivity_matrix: self.connectivity_matrix.view(),
+            sensor_readings: self.sensor_readings.view(),
+        }
+    }
+
+    pub fn arcs(self) -> SimulationStateArcs {
+        SimulationStateArcs {
+            positions: ArcArray::from(self.positions),
+            velocities: ArcArray::from(self.velocities),
+            particle_types: ArcArray::from(self.particle_types),
+            is_active_mask: ArcArray::from(self.is_active_mask),
+            density_field: ArcArray::from(self.density_field),
+            event_timestamps: ArcArray::from(self.event_timestamps),
+            connectivity_matrix: ArcArray::from(self.connectivity_matrix),
+            sensor_readings: ArcArray::from(self.sensor_readings),
+        }
+    }
+}
