@@ -1,3 +1,4 @@
+use generic_lib::ArrayFields;
 use ndarray::{
     ArcArray, ArcArray1, ArcArray2, Array1, Array2, Array3, ArrayView1, ArrayView2, ArrayView3, Ix3,
 };
@@ -67,26 +68,30 @@ impl PartialSimulationState {
             && connectivity_matrix.is_some()
             && sensor_readings.is_some()
     }
-
-    pub fn build(self) -> Result<SimulationState, Self> {
-        if !self.all_fields_present() {
-            return Err(self);
-        }
-        Ok(SimulationState {
-            positions: self.positions.unwrap(),
-            velocities: self.velocities.unwrap(),
-            particle_types: self.particle_types.unwrap(),
-            is_active_mask: self.is_active_mask.unwrap(),
-            density_field: self.density_field.unwrap(),
-            event_timestamps: self.event_timestamps.unwrap(),
-            connectivity_matrix: self.connectivity_matrix.unwrap(),
-            sensor_readings: self.sensor_readings.unwrap(),
-        })
-    }
 }
 
-impl SimulationState {
-    pub fn views(&self) -> SimulationStateView {
+impl ArrayFields for SimulationState {
+    type Partial = PartialSimulationState;
+    type Arcs = SimulationStateArcs;
+    type Views<'a> = SimulationStateView<'a>;
+
+    fn build(partial: Self::Partial) -> Result<Self, Self::Partial> {
+        if !partial.all_fields_present() {
+            return Err(partial);
+        }
+        Ok(SimulationState {
+            positions: partial.positions.unwrap(),
+            velocities: partial.velocities.unwrap(),
+            particle_types: partial.particle_types.unwrap(),
+            is_active_mask: partial.is_active_mask.unwrap(),
+            density_field: partial.density_field.unwrap(),
+            event_timestamps: partial.event_timestamps.unwrap(),
+            connectivity_matrix: partial.connectivity_matrix.unwrap(),
+            sensor_readings: partial.sensor_readings.unwrap(),
+        })
+    }
+
+    fn views(&self) -> Self::Views<'_> {
         SimulationStateView {
             positions: self.positions.view(),
             velocities: self.velocities.view(),
@@ -99,7 +104,7 @@ impl SimulationState {
         }
     }
 
-    pub fn arcs(self) -> SimulationStateArcs {
+    fn arcs(self) -> Self::Arcs {
         SimulationStateArcs {
             positions: ArcArray::from(self.positions),
             velocities: ArcArray::from(self.velocities),

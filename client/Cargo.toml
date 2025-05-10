@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 ndarray.workspace = true
+
+generic_lib = { path = "../generic_lib" }
