@@ -51,3 +51,28 @@ impl<A, Idx: Dimension> Func<Array<A, Idx>> for FieldArcs {
         ArcArray::from(i)
     }
 }
+
+pub struct Owned;
+pub struct Partial;
+pub struct Arcd;
+pub struct View<'a>(PhantomData<&'a ()>);
+
+pub trait Domain {
+    type Array<DType: 'static, Idx>;
+}
+
+impl Domain for Owned {
+    type Array<DType: 'static, Idx> = ndarray::Array<DType, Idx>;
+}
+
+impl Domain for Partial {
+    type Array<DType: 'static, Idx> = Option<ndarray::Array<DType, Idx>>;
+}
+
+impl Domain for Arcd {
+    type Array<DType: 'static, Idx> = ndarray::ArcArray<DType, Idx>;
+}
+
+impl<'a> Domain for View<'a> {
+    type Array<DType: 'static, Idx> = ndarray::ArrayView<'a, DType, Idx>;
+}
