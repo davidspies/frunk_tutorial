@@ -3,6 +3,10 @@ use std::marker::PhantomData;
 use frunk_utils::Func;
 use ndarray::{ArcArray, Array, ArrayView, Dimension};
 
+pub mod reexports {
+    pub use ::frunk_utils;
+}
+
 pub trait ArrayFields: Sized {
     type Partial;
     type Arcs;
@@ -75,4 +79,42 @@ impl Domain for Arcd {
 
 impl<'a> Domain for View<'a> {
     type Array<DType: 'static, Idx> = ndarray::ArrayView<'a, DType, Idx>;
+}
+
+#[macro_export]
+macro_rules! impl_array_fields {
+    ($name:ident) => {
+        impl $crate::ArrayFields for $name<$crate::Owned> {
+            type Partial = $name<$crate::Partial>;
+            type Arcs = $name<$crate::Arcd>;
+            type Views<'a> = $name<$crate::View<'a>>;
+
+            fn build(partial: Self::Partial) -> Result<Self, Self::Partial> {
+                use ::frunk::ToRef;
+                use $crate::reexports::frunk_utils::WithGeneric;
+
+                let mut all_fields_present = true;
+                partial
+                    .to_ref()
+                    .for_each($crate::AllFieldsPresent(&mut all_fields_present));
+                if !all_fields_present {
+                    return Err(partial);
+                }
+                Ok(partial.hmap($crate::UnwrapFields))
+            }
+
+            fn views(&self) -> Self::Views<'_> {
+                use ::frunk::ToRef;
+                use $crate::reexports::frunk_utils::WithGeneric;
+
+                self.to_ref().hmap($crate::FieldViews::default())
+            }
+
+            fn arcs(self) -> Self::Arcs {
+                use $crate::reexports::frunk_utils::WithGeneric;
+
+                self.hmap($crate::FieldArcs)
+            }
+        }
+    };
 }

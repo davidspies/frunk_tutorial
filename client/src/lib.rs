@@ -1,10 +1,6 @@
-use frunk::{Generic, ToRef};
-use frunk_utils::WithGeneric;
+use frunk::Generic;
 use frunk_utils_derives::ToRef;
-use generic_lib::{
-    AllFieldsPresent, Arcd, ArrayFields, Domain, FieldArcs, FieldViews, Owned, Partial,
-    UnwrapFields, View,
-};
+use generic_lib::{Arcd, Domain, Owned, Partial, View, impl_array_fields};
 use ndarray::{Ix1, Ix2, Ix3};
 
 #[derive(Generic, ToRef)]
@@ -18,33 +14,9 @@ pub struct SimulationStateG<D: Domain> {
     pub connectivity_matrix: D::Array<u8, Ix2>,
     pub sensor_readings: D::Array<f32, Ix2>,
 }
+impl_array_fields!(SimulationStateG);
 
 pub type SimulationState = SimulationStateG<Owned>;
 pub type PartialSimulationState = SimulationStateG<Partial>;
 pub type SimulationStateArcs = SimulationStateG<Arcd>;
 pub type SimulationStateView<'a> = SimulationStateG<View<'a>>;
-
-impl ArrayFields for SimulationState {
-    type Partial = PartialSimulationState;
-    type Arcs = SimulationStateArcs;
-    type Views<'a> = SimulationStateView<'a>;
-
-    fn build(partial: Self::Partial) -> Result<Self, Self::Partial> {
-        let mut all_fields_present = true;
-        partial
-            .to_ref()
-            .for_each(AllFieldsPresent(&mut all_fields_present));
-        if !all_fields_present {
-            return Err(partial);
-        }
-        Ok(partial.hmap(UnwrapFields))
-    }
-
-    fn views(&self) -> Self::Views<'_> {
-        self.to_ref().hmap(FieldViews::default())
-    }
-
-    fn arcs(self) -> Self::Arcs {
-        self.hmap(FieldArcs)
-    }
-}
