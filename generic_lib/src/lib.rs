@@ -19,18 +19,28 @@ pub trait Func<Input> {
     fn call(&mut self, i: Input) -> Self::Output;
 }
 
-pub trait AllFieldsPresent {
-    fn all_fields_present(self) -> bool;
+pub trait ForEach<F> {
+    fn for_each(self, f: F);
 }
-impl AllFieldsPresent for HNil {
-    fn all_fields_present(self) -> bool {
-        true
+
+impl<F> ForEach<F> for HNil {
+    fn for_each(self, _f: F) {}
+}
+
+impl<F: Func<Head, Output = ()>, Head, Tail: ForEach<F>> ForEach<F> for HCons<Head, Tail> {
+    fn for_each(self, mut f: F) {
+        let HCons { head, tail } = self;
+        f.call(head);
+        tail.for_each(f);
     }
 }
-impl<'a, H, T: AllFieldsPresent> AllFieldsPresent for HCons<&'a Option<H>, T> {
-    fn all_fields_present(self) -> bool {
-        let HCons { head, tail } = self;
-        head.is_some() && tail.all_fields_present()
+
+pub struct AllFieldsPresent<'a>(pub &'a mut bool);
+impl<'a, T> Func<&'a Option<T>> for AllFieldsPresent<'_> {
+    type Output = ();
+
+    fn call(&mut self, i: &'a Option<T>) -> Self::Output {
+        *self.0 &= i.is_some()
     }
 }
 

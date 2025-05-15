@@ -1,6 +1,8 @@
 use frunk::{Generic, ToRef};
 use frunk_utils_derives::ToRef;
-use generic_lib::{AllFieldsPresent, ArrayFields, FieldArcs, FieldViews, HMappable, UnwrapFields};
+use generic_lib::{
+    AllFieldsPresent, ArrayFields, FieldArcs, FieldViews, ForEach, HMappable, UnwrapFields,
+};
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
 
 #[derive(Generic, ToRef)]
@@ -54,7 +56,9 @@ pub struct SimulationStateView<'a> {
 impl PartialSimulationState {
     fn all_fields_present(&self) -> bool {
         let hlist = frunk::into_generic(self.to_ref());
-        hlist.all_fields_present()
+        let mut all_fields_present = true;
+        hlist.for_each(AllFieldsPresent(&mut all_fields_present));
+        all_fields_present
     }
 }
 
