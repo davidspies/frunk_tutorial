@@ -1,6 +1,7 @@
-use frunk::{Generic, ToRef};
+use frunk::{Generic, ToRef, hlist::HMappable};
+use frunk_utils::Poly;
 use frunk_utils_derives::ToRef;
-use generic_lib::{ArrayFields, FieldArcs, FieldViews, HMappable, UnwrapFields};
+use generic_lib::{ArrayFields, FieldArcs, FieldViews, UnwrapFields};
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
 
 #[derive(Generic, ToRef)]
@@ -68,16 +69,19 @@ impl ArrayFields for SimulationState {
             return Err(partial);
         }
         let hlist = frunk::into_generic(partial);
-        Ok(frunk::from_generic(HMappable::map(hlist, UnwrapFields)))
+        Ok(frunk::from_generic(HMappable::map(
+            hlist,
+            Poly(UnwrapFields),
+        )))
     }
 
     fn views(&self) -> Self::Views<'_> {
         let hlist = frunk::into_generic(self.to_ref());
-        frunk::from_generic(HMappable::map(hlist, FieldViews))
+        frunk::from_generic(HMappable::map(hlist, Poly(FieldViews)))
     }
 
     fn arcs(self) -> Self::Arcs {
         let hlist = frunk::into_generic(self);
-        frunk::from_generic(HMappable::map(hlist, FieldArcs))
+        frunk::from_generic(HMappable::map(hlist, Poly(FieldArcs)))
     }
 }
