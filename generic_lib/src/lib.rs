@@ -35,13 +35,19 @@ impl<F: Func<Head, Output = ()>, Head, Tail: ForEach<F>> ForEach<F> for HCons<He
     }
 }
 
-pub struct AllFieldsPresent<'a>(pub &'a mut bool);
+pub struct AllFieldsPresent<'a>(&'a mut bool);
 impl<'a, T> Func<&'a Option<T>> for AllFieldsPresent<'_> {
     type Output = ();
 
     fn call(&mut self, i: &'a Option<T>) -> Self::Output {
         *self.0 &= i.is_some()
     }
+}
+
+pub fn all_fields_present(hlist: impl for<'a> ForEach<AllFieldsPresent<'a>>) -> bool {
+    let mut all_present = true;
+    hlist.for_each(AllFieldsPresent(&mut all_present));
+    all_present
 }
 
 pub trait HMappable<Mapper> {
