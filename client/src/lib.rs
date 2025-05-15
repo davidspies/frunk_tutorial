@@ -24,22 +24,17 @@ pub type PartialSimulationState = SimulationStateG<Partial>;
 pub type SimulationStateArcs = SimulationStateG<Arcd>;
 pub type SimulationStateView<'a> = SimulationStateG<View<'a>>;
 
-impl PartialSimulationState {
-    fn all_fields_present(&self) -> bool {
-        let mut all_fields_present = true;
-        self.to_ref()
-            .for_each(AllFieldsPresent(&mut all_fields_present));
-        all_fields_present
-    }
-}
-
 impl ArrayFields for SimulationState {
     type Partial = PartialSimulationState;
     type Arcs = SimulationStateArcs;
     type Views<'a> = SimulationStateView<'a>;
 
     fn build(partial: Self::Partial) -> Result<Self, Self::Partial> {
-        if !partial.all_fields_present() {
+        let mut all_fields_present = true;
+        partial
+            .to_ref()
+            .for_each(AllFieldsPresent(&mut all_fields_present));
+        if !all_fields_present {
             return Err(partial);
         }
         Ok(partial.hmap(UnwrapFields))
