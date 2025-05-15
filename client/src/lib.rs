@@ -1,6 +1,9 @@
+use frunk::Generic;
+use frunk_utils_derives::ToRef;
 use generic_lib::ArrayFields;
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
 
+#[derive(Generic, ToRef)]
 pub struct SimulationState {
     pub positions: Array<f64, Ix2>,
     pub velocities: Array<f64, Ix2>,
@@ -12,6 +15,7 @@ pub struct SimulationState {
     pub sensor_readings: Array<f32, Ix2>,
 }
 
+#[derive(Generic, ToRef)]
 pub struct PartialSimulationState {
     pub positions: Option<Array<f64, Ix2>>,
     pub velocities: Option<Array<f64, Ix2>>,
@@ -23,6 +27,7 @@ pub struct PartialSimulationState {
     pub sensor_readings: Option<Array<f32, Ix2>>,
 }
 
+#[derive(Generic)]
 pub struct SimulationStateArcs {
     pub positions: ArcArray<f64, Ix2>,
     pub velocities: ArcArray<f64, Ix2>,
@@ -34,6 +39,7 @@ pub struct SimulationStateArcs {
     pub sensor_readings: ArcArray<f32, Ix2>,
 }
 
+#[derive(Generic)]
 pub struct SimulationStateView<'a> {
     pub positions: ArrayView<'a, f64, Ix2>,
     pub velocities: ArrayView<'a, f64, Ix2>,
