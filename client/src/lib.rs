@@ -1,6 +1,6 @@
-use frunk::{Generic, ToRef, hlist, hlist_pat};
+use frunk::{Generic, ToRef};
 use frunk_utils_derives::ToRef;
-use generic_lib::ArrayFields;
+use generic_lib::{AllFieldsPresent, ArrayFields, FieldArcs, FieldViews, UnwrapFields};
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
 
 #[derive(Generic, ToRef)]
@@ -53,24 +53,8 @@ pub struct SimulationStateView<'a> {
 
 impl PartialSimulationState {
     fn all_fields_present(&self) -> bool {
-        let hlist_pat![
-            positions,
-            velocities,
-            particle_types,
-            is_active_mask,
-            density_field,
-            event_timestamps,
-            connectivity_matrix,
-            sensor_readings,
-        ] = frunk::into_generic(self.to_ref());
-        positions.is_some()
-            && velocities.is_some()
-            && particle_types.is_some()
-            && is_active_mask.is_some()
-            && density_field.is_some()
-            && event_timestamps.is_some()
-            && connectivity_matrix.is_some()
-            && sensor_readings.is_some()
+        let hlist = frunk::into_generic(self.to_ref());
+        hlist.all_fields_present()
     }
 }
 
@@ -83,71 +67,17 @@ impl ArrayFields for SimulationState {
         if !partial.all_fields_present() {
             return Err(partial);
         }
-        let hlist_pat![
-            positions,
-            velocities,
-            particle_types,
-            is_active_mask,
-            density_field,
-            event_timestamps,
-            connectivity_matrix,
-            sensor_readings,
-        ] = frunk::into_generic(partial);
-        Ok(frunk::from_generic(hlist![
-            positions.unwrap(),
-            velocities.unwrap(),
-            particle_types.unwrap(),
-            is_active_mask.unwrap(),
-            density_field.unwrap(),
-            event_timestamps.unwrap(),
-            connectivity_matrix.unwrap(),
-            sensor_readings.unwrap(),
-        ]))
+        let hlist = frunk::into_generic(partial);
+        Ok(frunk::from_generic(hlist.unwrap_fields()))
     }
 
     fn views(&self) -> Self::Views<'_> {
-        let hlist_pat![
-            positions,
-            velocities,
-            particle_types,
-            is_active_mask,
-            density_field,
-            event_timestamps,
-            connectivity_matrix,
-            sensor_readings,
-        ] = frunk::into_generic(self.to_ref());
-        frunk::from_generic(hlist![
-            positions.view(),
-            velocities.view(),
-            particle_types.view(),
-            is_active_mask.view(),
-            density_field.view(),
-            event_timestamps.view(),
-            connectivity_matrix.view(),
-            sensor_readings.view(),
-        ])
+        let hlist = frunk::into_generic(self.to_ref());
+        frunk::from_generic(hlist.views())
     }
 
     fn arcs(self) -> Self::Arcs {
-        let hlist_pat![
-            positions,
-            velocities,
-            particle_types,
-            is_active_mask,
-            density_field,
-            event_timestamps,
-            connectivity_matrix,
-            sensor_readings,
-        ] = frunk::into_generic(self);
-        frunk::from_generic(hlist![
-            ArcArray::from(positions),
-            ArcArray::from(velocities),
-            ArcArray::from(particle_types),
-            ArcArray::from(is_active_mask),
-            ArcArray::from(density_field),
-            ArcArray::from(event_timestamps),
-            ArcArray::from(connectivity_matrix),
-            ArcArray::from(sensor_readings),
-        ])
+        let hlist = frunk::into_generic(self);
+        frunk::from_generic(hlist.arcs())
     }
 }
