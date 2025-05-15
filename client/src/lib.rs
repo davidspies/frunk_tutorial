@@ -1,4 +1,4 @@
-use frunk::{Generic, HCons, HNil, ToRef, hlist};
+use frunk::{Generic, ToRef, hlist, hlist_pat};
 use frunk_utils_derives::ToRef;
 use generic_lib::ArrayFields;
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
@@ -53,38 +53,16 @@ pub struct SimulationStateView<'a> {
 
 impl PartialSimulationState {
     fn all_fields_present(&self) -> bool {
-        let HCons {
-            head: positions,
-            tail:
-                HCons {
-                    head: velocities,
-                    tail:
-                        HCons {
-                            head: particle_types,
-                            tail:
-                                HCons {
-                                    head: is_active_mask,
-                                    tail:
-                                        HCons {
-                                            head: density_field,
-                                            tail:
-                                                HCons {
-                                                    head: event_timestamps,
-                                                    tail:
-                                                        HCons {
-                                                            head: connectivity_matrix,
-                                                            tail:
-                                                                HCons {
-                                                                    head: sensor_readings,
-                                                                    tail: HNil,
-                                                                },
-                                                        },
-                                                },
-                                        },
-                                },
-                        },
-                },
-        } = frunk::into_generic(self.to_ref());
+        let hlist_pat![
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        ] = frunk::into_generic(self.to_ref());
         positions.is_some()
             && velocities.is_some()
             && particle_types.is_some()
@@ -105,38 +83,16 @@ impl ArrayFields for SimulationState {
         if !partial.all_fields_present() {
             return Err(partial);
         }
-        let HCons {
-            head: positions,
-            tail:
-                HCons {
-                    head: velocities,
-                    tail:
-                        HCons {
-                            head: particle_types,
-                            tail:
-                                HCons {
-                                    head: is_active_mask,
-                                    tail:
-                                        HCons {
-                                            head: density_field,
-                                            tail:
-                                                HCons {
-                                                    head: event_timestamps,
-                                                    tail:
-                                                        HCons {
-                                                            head: connectivity_matrix,
-                                                            tail:
-                                                                HCons {
-                                                                    head: sensor_readings,
-                                                                    tail: HNil,
-                                                                },
-                                                        },
-                                                },
-                                        },
-                                },
-                        },
-                },
-        } = frunk::into_generic(partial);
+        let hlist_pat![
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        ] = frunk::into_generic(partial);
         Ok(frunk::from_generic(hlist![
             positions.unwrap(),
             velocities.unwrap(),
@@ -150,38 +106,16 @@ impl ArrayFields for SimulationState {
     }
 
     fn views(&self) -> Self::Views<'_> {
-        let HCons {
-            head: positions,
-            tail:
-                HCons {
-                    head: velocities,
-                    tail:
-                        HCons {
-                            head: particle_types,
-                            tail:
-                                HCons {
-                                    head: is_active_mask,
-                                    tail:
-                                        HCons {
-                                            head: density_field,
-                                            tail:
-                                                HCons {
-                                                    head: event_timestamps,
-                                                    tail:
-                                                        HCons {
-                                                            head: connectivity_matrix,
-                                                            tail:
-                                                                HCons {
-                                                                    head: sensor_readings,
-                                                                    tail: HNil,
-                                                                },
-                                                        },
-                                                },
-                                        },
-                                },
-                        },
-                },
-        } = frunk::into_generic(self.to_ref());
+        let hlist_pat![
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        ] = frunk::into_generic(self.to_ref());
         frunk::from_generic(hlist![
             positions.view(),
             velocities.view(),
@@ -195,38 +129,16 @@ impl ArrayFields for SimulationState {
     }
 
     fn arcs(self) -> Self::Arcs {
-        let HCons {
-            head: positions,
-            tail:
-                HCons {
-                    head: velocities,
-                    tail:
-                        HCons {
-                            head: particle_types,
-                            tail:
-                                HCons {
-                                    head: is_active_mask,
-                                    tail:
-                                        HCons {
-                                            head: density_field,
-                                            tail:
-                                                HCons {
-                                                    head: event_timestamps,
-                                                    tail:
-                                                        HCons {
-                                                            head: connectivity_matrix,
-                                                            tail:
-                                                                HCons {
-                                                                    head: sensor_readings,
-                                                                    tail: HNil,
-                                                                },
-                                                        },
-                                                },
-                                        },
-                                },
-                        },
-                },
-        } = frunk::into_generic(self);
+        let hlist_pat![
+            positions,
+            velocities,
+            particle_types,
+            is_active_mask,
+            density_field,
+            event_timestamps,
+            connectivity_matrix,
+            sensor_readings,
+        ] = frunk::into_generic(self);
         frunk::from_generic(hlist![
             ArcArray::from(positions),
             ArcArray::from(velocities),
