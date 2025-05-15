@@ -1,5 +1,5 @@
-use frunk::{Generic, ToRef, hlist::HMappable};
-use frunk_utils::{ForEach, Poly};
+use frunk::{Generic, ToRef};
+use frunk_utils::WithGeneric;
 use frunk_utils_derives::ToRef;
 use generic_lib::{AllFieldsPresent, ArrayFields, FieldArcs, FieldViews, UnwrapFields};
 use ndarray::{ArcArray, Array, ArrayView, Ix1, Ix2, Ix3};
@@ -54,9 +54,9 @@ pub struct SimulationStateView<'a> {
 
 impl PartialSimulationState {
     fn all_fields_present(&self) -> bool {
-        let hlist = frunk::into_generic(self.to_ref());
         let mut all_fields_present = true;
-        hlist.for_each(AllFieldsPresent(&mut all_fields_present));
+        self.to_ref()
+            .for_each(AllFieldsPresent(&mut all_fields_present));
         all_fields_present
     }
 }
@@ -70,20 +70,14 @@ impl ArrayFields for SimulationState {
         if !partial.all_fields_present() {
             return Err(partial);
         }
-        let hlist = frunk::into_generic(partial);
-        Ok(frunk::from_generic(HMappable::map(
-            hlist,
-            Poly(UnwrapFields),
-        )))
+        Ok(partial.hmap(UnwrapFields))
     }
 
     fn views(&self) -> Self::Views<'_> {
-        let hlist = frunk::into_generic(self.to_ref());
-        frunk::from_generic(HMappable::map(hlist, Poly(FieldViews::default())))
+        self.to_ref().hmap(FieldViews::default())
     }
 
     fn arcs(self) -> Self::Arcs {
-        let hlist = frunk::into_generic(self);
-        frunk::from_generic(HMappable::map(hlist, Poly(FieldArcs)))
+        self.hmap(FieldArcs)
     }
 }
