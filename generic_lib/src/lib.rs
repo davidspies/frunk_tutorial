@@ -1,4 +1,4 @@
-use frunk_utils::{ForEach, Func};
+use frunk_utils::{ForEach, Func, WithGeneric};
 use ndarray::{ArcArray, Array, ArrayView, Dimension};
 
 pub trait ArrayFields: Sized {
@@ -22,9 +22,11 @@ impl<'a, T> Func<&'a Option<T>> for AllFieldsPresent<'_> {
     }
 }
 
-pub fn all_fields_present(hlist: impl for<'a> ForEach<AllFieldsPresent<'a>>) -> bool {
+pub fn all_fields_present<R: for<'a> ForEach<AllFieldsPresent<'a>>>(
+    data: impl WithGeneric<Repr = R>,
+) -> bool {
     let mut all_present = true;
-    hlist.for_each(AllFieldsPresent(&mut all_present));
+    data.for_each(AllFieldsPresent(&mut all_present));
     all_present
 }
 
