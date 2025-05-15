@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use frunk::{HCons, HNil};
 use ndarray::{ArcArray, Array, ArrayView, Dimension};
 
@@ -11,6 +13,12 @@ pub trait ArrayFields: Sized {
     fn build(partial: Self::Partial) -> Result<Self, Self::Partial>;
     fn views(&self) -> Self::Views<'_>;
     fn arcs(self) -> Self::Arcs;
+}
+
+pub trait Func<Input> {
+    type Output;
+
+    fn call(&mut self, i: Input) -> Self::Output;
 }
 
 pub trait AllFieldsPresent {
@@ -28,76 +36,56 @@ impl<'a, H, T: AllFieldsPresent> AllFieldsPresent for HCons<&'a Option<H>, T> {
     }
 }
 
-pub trait UnwrapFields {
-    type Unwrapped;
+pub trait HMappable<Mapper> {
+    type Output;
 
-    fn unwrap_fields(self) -> Self::Unwrapped;
+    fn map(self, mapper: Mapper) -> Self::Output;
 }
-impl UnwrapFields for HNil {
-    type Unwrapped = HNil;
 
-    fn unwrap_fields(self) -> Self::Unwrapped {
+impl<F> HMappable<F> for HNil {
+    type Output = HNil;
+
+    fn map(self, _mapper: F) -> Self::Output {
         HNil
     }
 }
-impl<H, T: UnwrapFields> UnwrapFields for HCons<Option<H>, T> {
-    type Unwrapped = HCons<H, T::Unwrapped>;
 
-    fn unwrap_fields(self) -> Self::Unwrapped {
+impl<F: Func<Head>, Head, Tail: HMappable<F>> HMappable<F> for HCons<Head, Tail> {
+    type Output = HCons<F::Output, Tail::Output>;
+
+    fn map(self, mut mapper: F) -> Self::Output {
         let HCons { head, tail } = self;
         HCons {
-            head: head.unwrap(),
-            tail: tail.unwrap_fields(),
+            head: mapper.call(head),
+            tail: tail.map(mapper),
         }
     }
 }
 
-pub trait FieldViews<'a> {
-    type Views;
+pub struct UnwrapFields;
+impl<T> Func<Option<T>> for UnwrapFields {
+    type Output = T;
 
-    fn views(self) -> Self::Views;
-}
-impl<'a> FieldViews<'a> for HNil {
-    type Views = HNil;
-
-    fn views(self) -> Self::Views {
-        HNil
-    }
-}
-impl<'a, HElem, HIdx: Dimension, T: FieldViews<'a>> FieldViews<'a>
-    for HCons<&'a Array<HElem, HIdx>, T>
-{
-    type Views = HCons<ArrayView<'a, HElem, HIdx>, T::Views>;
-
-    fn views(self) -> Self::Views {
-        let HCons { head, tail } = self;
-        HCons {
-            head: head.view(),
-            tail: tail.views(),
-        }
+    fn call(&mut self, i: Option<T>) -> Self::Output {
+        i.unwrap()
     }
 }
 
-pub trait FieldArcs {
-    type Arcs;
+#[derive(Default)]
+pub struct FieldViews<'a>(PhantomData<&'a ()>);
+impl<'a, A, Idx: Dimension> Func<&'a Array<A, Idx>> for FieldViews<'a> {
+    type Output = ArrayView<'a, A, Idx>;
 
-    fn arcs(self) -> Self::Arcs;
-}
-impl FieldArcs for HNil {
-    type Arcs = HNil;
-
-    fn arcs(self) -> Self::Arcs {
-        HNil
+    fn call(&mut self, i: &'a Array<A, Idx>) -> Self::Output {
+        i.view()
     }
 }
-impl<HElem, HIdx: Dimension, T: FieldArcs> FieldArcs for HCons<Array<HElem, HIdx>, T> {
-    type Arcs = HCons<ArcArray<HElem, HIdx>, T::Arcs>;
 
-    fn arcs(self) -> Self::Arcs {
-        let HCons { head, tail } = self;
-        HCons {
-            head: ArcArray::from(head),
-            tail: tail.arcs(),
-        }
+pub struct FieldArcs;
+impl<A, Idx: Dimension> Func<Array<A, Idx>> for FieldArcs {
+    type Output = ArcArray<A, Idx>;
+
+    fn call(&mut self, i: Array<A, Idx>) -> Self::Output {
+        ArcArray::from(i)
     }
 }
